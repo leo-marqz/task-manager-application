@@ -49,7 +49,7 @@ class AuthController {
             res.status(201).json({
                 message: 'User created successfully',
                 user: {
-                    id: newUser._id,
+                    _id: newUser._id,
                     name: newUser.name,
                     email: newUser.email,
                     profileImageUrl: newUser.profileImageUrl,
@@ -70,20 +70,38 @@ class AuthController {
      * @access Public
      */
     static async signIn(req, res) {
-        res.json({
-            message: 'Sign in successful',
-        });
-    }
+        try{
+            const { email, password } = req.body;
 
-    /**
-     * @desc Sign out a user
-     * @route POST /api/v1/auth/signout
-     * @access Private (Optional)
-     */
-    static async signOut(req, res) {
-        res.json({
-            message: 'Sign out successful',
-        });
+            const user = await User.findOne({ email });
+
+            if(!user){
+                return res.status(401).json({ message: 'Invalid email or password' });
+            }
+
+            // Check password
+            const isMatch = await bcrypt.compare(password, user.password);
+
+            if(!isMatch){
+                return res.status(401).json({ message: 'Invalid email or password' });
+            }
+
+            return res.status(200).json({
+                message: 'Sign in successful',
+                user: {
+                    _id: user._id,
+                    name: user.name,
+                    email: user.email,
+                    profileImageUrl: user.profileImageUrl,
+                    role: user.role,
+                    token: generateToken(user._id)
+                }
+            });
+            
+        }catch(err){
+            console.error( color.red('Error in signIn: '), err);
+            res.status(500).json({message: 'Server error', error: err.message});
+        }
     }
 
     /**
@@ -92,9 +110,19 @@ class AuthController {
      * @access Private (Requires authentication)
      */
     static async getProfile(req, res) {
-        res.json({
-            message: 'User profile retrieved successfully',
-        });
+        try{
+            const user = await User.findById(req.user.id).select('-password');
+
+            if(!user){
+                return res.status(404).json({ message: 'User not found' });
+            }
+
+            res.json(user);
+
+        }catch(err){
+            console.error( color.red('Error in getProfile: '), err);
+            res.status(500).json({message: 'Server error: ', error: err.message});
+        }
     }
 
     /**
@@ -103,9 +131,66 @@ class AuthController {
      * @access Private (Requires authentication)
      */
     static async updateProfile(req, res) {
-        res.json({
-            message: 'User profile updated successfully',
-        });
+        try{
+            const user = await User.findById(req.user.id);
+
+            if(!user){
+                return res.status(404).json({ message: 'User not found' });
+            }
+            user.name = req.body.name || user.name;
+            user.email = req.body.email || user.email;
+            user.profileImageUrl = req.body.profileImageUrl || user.profileImageUrl;
+
+            if(req.body.password){
+                const salt = await bcrypt.genSalt(10);
+                user.password = await bcrypt.hash(req.body.password, salt);
+            }
+
+            const updatedUser = await user.save();
+
+            res.json({
+                message: 'Profile updated successfully',
+                user: {
+                    _id: updatedUser._id,
+                    name: updatedUser.name,
+                    email: updatedUser.email,
+                    profileImageUrl: updatedUser.profileImageUrl,
+                    role: updatedUser.role,
+                    token: generateToken(updatedUser._id)
+                }
+            });
+
+        }catch(err){
+            console.error( color.red('Error in updateProfile: '), err);
+            res.status(500).json({message: 'Server error: ', error: err.message});
+        }
+    }
+
+    /**
+     * @desc Upload user image
+     * @route POST /api/v1/auth/upload-image
+     * @access Private (Requires authentication)
+     */
+    
+    static async uploadImage(req, res){
+        try{
+
+            if (!req.file) {
+                return res.status(400).json({ message: 'No file uploaded' });
+            }
+
+            const imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+
+            console.log(`Image URL: ${color.green(imageUrl)}`);
+
+            res.status(200).json({ message: 'Image uploaded successfully', imageUrl });
+
+        }catch(err){
+
+            console.error('Error in uploadImage: ', err);
+
+            return res.status(500).json({ message: 'Server error: ', error: err.message });
+        }
     }
 
 }
