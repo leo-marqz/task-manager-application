@@ -46,21 +46,6 @@ class UserController {
             const user = await User.findById(id).select('-password');
             if (!user) return res.status(404).json({ message: 'User not found' });
             res.json(user);
-            
-        } catch (error) {
-            res.status(500).json({ message: 'Server error', error: error.message });
-        }
-    }
-
-    /**
-     * @desc    Delete user (Admin Only)
-     * @route   DELETE /api/v1/users/:id
-     * @access  Private (Admin)
-     */
-    static async deleteUser(req, res) {
-        const { id } = req.params;
-        try {
-            //
         } catch (error) {
             res.status(500).json({ message: 'Server error', error: error.message });
         }
