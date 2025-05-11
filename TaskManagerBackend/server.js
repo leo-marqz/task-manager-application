@@ -11,6 +11,7 @@ import color from 'picocolors';
 import { connectDB } from './configuration/database.js'; 
 
 import authRoutes from './routes/authRoutes.js';
+import userRoutes from './routes/userRoutes.js';
 
 
 const app = express(); 
@@ -27,8 +28,8 @@ connectDB();
 app.use( express.json() ); 
 
 app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/users', userRoutes);
 // app.use('/api/v1/tasks', taskRoutes);
-// app.use('/api/v1/users', userRoutes);
 // app.use('/api/v1/reports', boardRoutes);
 
 const URL = process.env.APP_URL || 'http://localhost'; 
