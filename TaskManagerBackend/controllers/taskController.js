@@ -1,4 +1,6 @@
 
+import Task from '../models/Task.js';
+
 class TaskController {
 
     constructor(){}
@@ -9,7 +11,12 @@ class TaskController {
      * @access Private (Admin only)
      */
     static async getDashboardData(req, res) {
-        // Get dashboard data for admin
+        try {
+            
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Server error', error: error.message });
+        }
     }
 
     /**
@@ -18,7 +25,12 @@ class TaskController {
      * @access Private (User only)
      */
     static async getUserDashboardData(req, res) {
-        // Get dashboard data for user
+        try {
+            
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Server error', error: error.message });
+        }
     }
 
     /**
@@ -27,7 +39,12 @@ class TaskController {
      * @access Private (Admin: all, User: assigned) 
      */
     static async getAllTasks(req, res) {
-        // Get all tasks (Admin: all, User: assigned)
+        try {
+            
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Server error', error: error.message });
+        }
     }
 
     /**
@@ -36,7 +53,75 @@ class TaskController {
      * @access Private (Admin: all, User: assigned)
      */
     static async getTaskById(req, res) {
-        // Get task by ID
+        try {
+            const { status } = req.query;
+            let filter = {};
+
+            if(status){
+                filter.status = status;
+            }
+
+            let tasks = [];
+
+            if(req.user.role === 'admin'){
+                tasks = await Task.find(filter).populate(
+                    'assignedTo', 
+                    'name email profileImageUrl'
+                );
+            }else{
+                tasks = await Task.find({...filter, assignedTo: req.user._id })
+                .populate('assignedTo', 'name email profileImageUrl'); 
+            }
+
+            tasks = await Promise.all(
+                tasks.map(async (task)=>{
+                    const completedCount = task.todoChecklist
+                            .filter(item => item.completed).length;
+                    return {
+                        ...task._doc,
+                        completedTodoCount: completedCount,
+                        progress: Math.round((completedCount / task.todoChecklist.length) * 100)
+                    }
+                })
+            );
+
+            const allTasks = await Task.countDocuments(
+                req.user.role === 'admin' ? {} : { assignedTo: req.user._id }
+            );
+
+            const pendingTasks = await Task.countDocuments({
+                ...filter, 
+                status: 'Pending', 
+                ...(req.user.role !== 'admin' && { assignedTo: req.user._id })
+            });
+
+            const inProgressTasks = await Task.countDocuments({
+                ...filter, 
+                status: 'In Progress', 
+                ...(req.user.role !== 'admin' && { assignedTo: req.user._id })
+            });
+
+            const completedTasks = await Task.countDocuments({
+                ...filter, 
+                status: 'Completed', 
+                ...(req.user.role !== 'admin' && { assignedTo: req.user._id })
+            });
+
+            res.json({
+                message: 'Tasks fetched successfully',
+                summary:{
+                    allTasks,
+                    pendingTasks,
+                    inProgressTasks,
+                    completedTasks
+                },
+                tasks
+            });
+
+        }catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Server error', error: error.message });
+        }
     }
 
     /**
@@ -45,7 +130,34 @@ class TaskController {
      * @access Private (Admin only)
      */
     static async createTask(req, res) {
-        // Create a new task
+        try {
+            const {
+                title, description, priority, 
+                dueDate, assignedTo, attachments, 
+                todoChecklist
+            } = req.body;
+
+            if(!Array.isArray(assignedTo)){
+                return res.status(400).json({ message: 'AssignedTo must be an array of user IDs'});
+            }
+
+            const task = await Task.create({
+                title, 
+                description, 
+                priority, 
+                dueDate, 
+                assignedTo, 
+                createdBy: req.user._id,
+                attachments, 
+                todoChecklist
+            });
+
+            res.status(201).json({ message: 'Task created successfully', task });
+
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Server error', error: error.message });
+        }
     }
 
     /**
@@ -54,7 +166,12 @@ class TaskController {
      * @access Private
      */
     static async updateTask(req, res) {
-        // Update task details
+        try {
+            
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Server error', error: error.message });
+        }
     }
 
     /**
@@ -63,7 +180,12 @@ class TaskController {
      * @access Private (Admin only)
      */
     static async deleteTask(req, res) {
-        // Delete a task
+        try {
+            
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Server error', error: error.message });
+        }
     }
 
     /**
@@ -72,7 +194,12 @@ class TaskController {
      * @access Private
      */
     static async updateTaskStatus(req, res) {
-        // Update task status
+        try {
+            
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Server error', error: error.message });
+        }
     }
 
     /**
@@ -81,7 +208,12 @@ class TaskController {
      * @access Private
      */
     static async updateTaskChecklist(req, res) {
-        // Update task checklist
+        try {
+            
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Server error', error: error.message });
+        }
     }
 }
 
