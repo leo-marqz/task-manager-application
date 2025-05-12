@@ -65,7 +65,8 @@ class TaskController {
                             .filter(item => item.completed).length;
                     return {
                         ...task._doc,
-                        completedTodoCount: completedCount
+                        completedTodoCount: completedCount,
+                        completedTodoProgress: Math.round((completedCount / task.todoChecklist.length) * 100) + ' %',
                     }
                 })
             );
@@ -175,7 +176,29 @@ class TaskController {
      */
     static async updateTask(req, res) {
         try {
-            
+            const { id } = req.params; // Task ID
+            const task = await Task.findById(id);
+
+            if(!task) return res.status(404).json({ message: 'Task not found' });
+
+            task.title = req.body.title || task.title;
+            task.description = req.body.description || task.description;
+            task.priority = req.body.priority || task.priority;
+            task.dueDate = req.body.dueDate || task.dueDate;
+            task.todoChecklist = req.body.todoChecklist || task.todoChecklist;
+            task.attachments = req.body.attachments || task.attachments;
+
+            if(req.body.assignedTo){
+                if(!Array.isArray(req.body.assignedTo)){
+                    return res.status(400).json({ message: 'AssignedTo must be an array of user IDs'});
+                }
+                task.assignedTo = req.body.assignedTo;
+            }
+
+            const updatedTask = await task.save();
+
+            res.json({ message: 'Task updated successfully', task: updatedTask });
+
         } catch (error) {
             console.error(error);
             res.status(500).json({ message: 'Server error', error: error.message });
