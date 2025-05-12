@@ -39,21 +39,10 @@ class TaskController {
      * @access Private (Admin: all, User: assigned) 
      */
     static async getAllTasks(req, res) {
-        try {
-            
-        } catch (error) {
-            console.error(error);
-            res.status(500).json({ message: 'Server error', error: error.message });
-        }
-    }
-
-    /**
-     * @desc Get task by ID
-     * @route GET /api/v1/tasks/:id
-     * @access Private (Admin: all, User: assigned)
-     */
-    static async getTaskById(req, res) {
-        try {
+         try {
+            // ?status=Pending
+            // ?status=In Progress
+            // ?status=Completed
             const { status } = req.query;
             let filter = {};
 
@@ -64,10 +53,7 @@ class TaskController {
             let tasks = [];
 
             if(req.user.role === 'admin'){
-                tasks = await Task.find(filter).populate(
-                    'assignedTo', 
-                    'name email profileImageUrl'
-                );
+                tasks = await Task.find(filter).populate('assignedTo', 'name email profileImageUrl');
             }else{
                 tasks = await Task.find({...filter, assignedTo: req.user._id })
                 .populate('assignedTo', 'name email profileImageUrl'); 
@@ -79,8 +65,7 @@ class TaskController {
                             .filter(item => item.completed).length;
                     return {
                         ...task._doc,
-                        completedTodoCount: completedCount,
-                        progress: Math.round((completedCount / task.todoChecklist.length) * 100)
+                        completedTodoCount: completedCount
                     }
                 })
             );
@@ -108,12 +93,11 @@ class TaskController {
             });
 
             res.json({
-                message: 'Tasks fetched successfully',
                 summary:{
-                    allTasks,
-                    pendingTasks,
-                    inProgressTasks,
-                    completedTasks
+                    total: allTasks,
+                    pending: pendingTasks,
+                    inProgress: inProgressTasks,
+                    completed: completedTasks
                 },
                 tasks
             });
@@ -122,6 +106,30 @@ class TaskController {
             console.error(error);
             res.status(500).json({ message: 'Server error', error: error.message });
         }
+    }
+
+    /**
+     * @desc Get task by ID
+     * @route GET /api/v1/tasks/:id
+     * @access Private (Admin: all, User: assigned)
+     */
+    static async getTaskById(req, res) {
+       try {
+        const { id } = req.params;
+        const task = await Task.findById(id)
+            .populate('assignedTo', 'name email profileImageUrl')
+            .populate('createdBy', 'name email profileImageUrl');
+
+        if(!task){
+            return res.status(404).json({ message: 'Task not found' });
+        }
+
+        res.json(task);
+
+       } catch (error) {
+            console.error(error);
+            res.status(500).json({ message: 'Server error', error: error.message });
+       }
     }
 
     /**
