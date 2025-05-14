@@ -1,4 +1,5 @@
 
+import color from 'picocolors';
 import Task from '../models/Task.js';
 
 class TaskController {
@@ -238,7 +239,7 @@ class TaskController {
         try {
             
             const task = await Task.findById(req.params.id);
-            
+
             if(!task) return res.status(404).json({ message: 'Task not found' });
 
             const isAssignedTo = task.assignedTo.some(
@@ -272,7 +273,43 @@ class TaskController {
      */
     static async updateTaskChecklist(req, res) {
         try {
-            
+            const { id } = req.params; // Task ID
+            const { todoChecklist } = req.body; 
+
+            const task = await Task.findById(id);
+
+            if(!task) return res.status(404).json({ message: 'Task not found!' });
+
+            if( task.assignedTo.includes(req.user._id) && req.user.role !== 'admin') {
+                return res.status(403).json({ message: 'Not Authorized to update checklist!' });
+            }
+
+            if(!todoChecklist || !Array.isArray(todoChecklist)){
+                console.log( color.red(todoChecklist) );
+                return res.status(400).json({ message: 'Todo checklist must be an array' });
+            }
+
+            task.todoChecklist = todoChecklist ?? task.todoChecklist;
+
+            const completedCount = task.todoChecklist.filter((todo)=>todo.completed).length;
+            const totalTodos = task.todoChecklist.length;
+            task.progress =  totalTodos > 0 ? Math.round((completedCount / totalTodos) * 100) : 0;
+
+            if(task.progress === 100){
+                task.status = 'Completed';
+            }else if(task.progress > 0) {
+                task.status = 'In Progress';
+            }else{
+                task.status = 'Pending';
+            }
+
+            await task.save();
+
+            const updatedTask = await Task.findById(id)
+                .populate('assignedTo', 'name email profileImageUrl')
+
+            res.json({ message: 'Task checklist updated!', task: updatedTask });
+
         } catch (error) {
             console.error(error);
             res.status(500).json({ message: 'Server error', error: error.message });
