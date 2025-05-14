@@ -6,7 +6,7 @@ import { protect, adminOnly } from '../middlewares/authMiddleware.js';
 
 const router = express.Router();
 
-router.get('/dashboard-data', protect, TaskController.getDashboardData);
+router.get('/dashboard-data', protect, adminOnly, TaskController.getDashboardData);
 router.get('/user-dashboard-data', protect, TaskController.getUserDashboardData);
 
 router.get('/', protect, TaskController.getAllTasks); // Get all tasks (Admin: all, User: assigned)
