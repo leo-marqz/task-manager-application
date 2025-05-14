@@ -212,7 +212,17 @@ class TaskController {
      */
     static async deleteTask(req, res) {
         try {
+
+            const { id } = req.params; // Task ID
+
+            const task = await Task.findById(id);
+
+            if(!task) return res.status(404).json({ message: 'Task not found' });
             
+            await task.deleteOne();
+
+            res.json({ message: 'Task deleted successfully' });
+
         } catch (error) {
             console.error(error);
             res.status(500).json({ message: 'Server error', error: error.message });
@@ -226,6 +236,28 @@ class TaskController {
      */
     static async updateTaskStatus(req, res) {
         try {
+            
+            const task = await Task.findById(req.params.id);
+            
+            if(!task) return res.status(404).json({ message: 'Task not found' });
+
+            const isAssignedTo = task.assignedTo.some(
+                userId => userId.toString() === req.user._id.toString()
+            );
+
+            if(!isAssignedTo && req.user.role !== 'admin') 
+                return res.status(403).json({ message: 'Not Authorized' });
+
+            task.status = req.body.status || task.status;
+
+            if(task.status === 'Completed'){
+                task.todoChecklist.forEach((todo)=>(todo.completed = true));
+                task.progress = 100;
+            }
+
+            await task.save();
+
+            res.json({ message: 'Task status updated!', task });
             
         } catch (error) {
             console.error(error);
